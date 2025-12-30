@@ -116,6 +116,13 @@ void updateSensors() {
         mqtt_client.publish(mqtt_powercut_topic, "POWER_CUT");
         publishCommandStatus("⚠️ POWER CUT DETECTED! Starting emergency sequence...");
         
+        // ---Send Telegram Alert ---
+        String alertMsg = "⚠️ Power Cut Detected!\n";
+        alertMsg += "Main Voltage: " + String(v1, 2) + "V\n";
+        alertMsg += "System Voltage: " + String(v2, 2) + "V";
+        sendTelegramMessage(alertMsg);
+        
+
         // --- 1. IMMEDIATE SYSTEM ACTIONS ---
         digitalWrite(LED2_PIN, LOW); // Turn System ON
         mqtt_client.publish(mqtt_led2_status_topic, "ON");
@@ -153,6 +160,13 @@ void updateSensors() {
         mqtt_client.publish(mqtt_command_status_topic, "CLEAR_LOG");
         delay(50);
         publishCommandStatus("✓ Power Restored.");
+
+        // ---Send Restoration Alert To Telegram ---
+        String restoreMsg = "✅ Power Restored.\n";
+        restoreMsg += "Duration: " + String(dur / 1000) + " seconds\n";
+        restoreMsg += "Energy Used: " + String(totalEnergyConsumed, 2) + " mWh";
+        sendTelegramMessage(restoreMsg);
+        // ------------
         
         // Interrupt Emergency Mode if active
         if (emergencyModeActive) {

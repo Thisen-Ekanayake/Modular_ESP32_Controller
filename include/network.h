@@ -16,4 +16,6 @@ void mqttCallback(char* topic, byte* payload, unsigned int length);
 // Helper to send status updates
 void publishCommandStatus(const char* message);
 
+//Telegram message sender   
+void sendTelegramMessage(String message);
 #endif

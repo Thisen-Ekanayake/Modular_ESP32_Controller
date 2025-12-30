@@ -12,7 +12,10 @@
 #define INTENSITY_B1_PIN 33   
 #define INTENSITY_B2_PIN 35   
 #define POWER_DETECT_PIN 18   
-#define POWER_CUT_STATE LOW   
+#define POWER_CUT_STATE LOW 
+// --- TELEGRAM SETTINGS ---
+#define TELEGRAM_BOT_TOKEN "8289194016:AAG0ShZjHz_2ogcp3GiEZWYx__pwuzfSr_M" 
+#define TELEGRAM_CHAT_ID "7996858275"  
 
 // --- WIFI CREDENTIALS ---
 extern const char* ssid;

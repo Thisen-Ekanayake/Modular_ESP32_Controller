@@ -2,7 +2,11 @@
 #include "config.h"
 #include "globals.h"
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
+#include <UniversalTelegramBot.h>
 unsigned long lastSignalUpdate = 0;
+WiFiClientSecure secured_client;
+UniversalTelegramBot bot(TELEGRAM_BOT_TOKEN, secured_client);
 
 void publishCommandStatus(const char* message) {
   mqtt_client.publish(mqtt_command_status_topic, message);
@@ -50,7 +54,28 @@ void connectMQTT() {
     }
   }
 }
+void sendTelegramMessage(String message) {
+  // 1. Configure security (Insecure is fast & easiest for simple projects)
+  secured_client.setCACert(TELEGRAM_CERTIFICATE_ROOT); // Add root certificate for api.telegram.org
 
+  // 2. Send the message
+  // Using millis() to prevent blocking if wifi is down is smart, 
+  // but for a power cut, we want to try hard to send it.
+  if (WiFi.status() == WL_CONNECTED) {
+      Serial.print("Sending Telegram: ");
+      Serial.println(message);
+      
+      bool sent = bot.sendMessage(TELEGRAM_CHAT_ID, message, "");
+      
+      if (sent) {
+        Serial.println("✓ Telegram sent successfully");
+      } else {
+        Serial.println("X Telegram failed to send");
+      }
+  } else {
+      Serial.println("Error: No WiFi, cannot send Telegram.");
+  }
+}
 void checkNetwork() {
   // ... your existing connection logic ...
   if (WiFi.status() != WL_CONNECTED) {

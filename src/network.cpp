@@ -2,6 +2,7 @@
 #include "config.h"
 #include "globals.h"
 #include <WiFi.h>
+unsigned long lastSignalUpdate = 0;
 
 void publishCommandStatus(const char* message) {
   mqtt_client.publish(mqtt_command_status_topic, message);
@@ -51,6 +52,7 @@ void connectMQTT() {
 }
 
 void checkNetwork() {
+  // ... your existing connection logic ...
   if (WiFi.status() != WL_CONNECTED) {
     connectWiFi();
   }
@@ -58,6 +60,20 @@ void checkNetwork() {
     connectMQTT();
   }
   mqtt_client.loop();
+
+  // --- ADD THIS BLOCK ---
+  // Check signal strength every 5 seconds
+  unsigned long now = millis();
+  if (now - lastSignalUpdate > SIGNAL_UPDATE_INTERVAL) {
+    lastSignalUpdate = now;
+    
+    // Read signal strength (RSSI)
+    long rssi = WiFi.RSSI();
+    
+    // Publish to topic: chami/esp32/stats/signal
+    mqtt_client.publish("chami/esp32/stats/signal", String(rssi).c_str());
+  }
+  // ---------------------
 }
 
 void mqttCallback(char* topic, byte* payload, unsigned int length) {

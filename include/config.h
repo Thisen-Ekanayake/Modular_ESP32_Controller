@@ -40,8 +40,9 @@ extern const char* mqtt_powercut_history_topic;
 extern const char* mqtt_light_intensity_topic;
 
 // --- CONSTANTS ---
-const float POWER_CUT_THRESHOLD = 9.0; 
+const float POWER_CUT_THRESHOLD = 1.0; 
 const unsigned long EMERGENCY_DURATION = 60000; 
 const unsigned long GPIO14_DELAY = 200;
+const long SIGNAL_UPDATE_INTERVAL = 5000;
 
 #endif

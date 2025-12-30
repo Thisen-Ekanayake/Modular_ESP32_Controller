@@ -687,6 +687,25 @@
                     </label>
                 </div>
 
+                <!-- Network Health -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <i class="fas fa-wifi card-icon" style="color: var(--primary-blue);"></i>
+                            Network Health
+                        </div>
+                    </div>
+                    <div style="text-align: center; margin: 1rem 0;">
+                        <div class="status-value" id="rssiValue" style="color: var(--text-dark);">-- dBm</div>
+                        
+                        <div id="rssiQuality" style="font-weight: bold; opacity: 0.8;">Waiting...</div>
+                    </div>
+                    
+                    <div style="height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; margin-top: 15px; overflow: hidden;">
+                        <div id="rssiBar" style="width: 0%; height: 100%; background: var(--primary-blue); transition: width 0.5s;"></div>
+                    </div>
+                </div>
+
                 <!-- Intensity Control -->
                 <div class="card status-card">
                     <div class="card-header">
@@ -876,6 +895,7 @@
             HISTORY: 'esp32/history/powercut',
             LIGHT_INTENSITY: 'esp32/light/intensity',
             BATTERY_PCT: 'esp32/sensor/battery_pct',
+            SIGNAL: 'chami/esp32/stats/signal',
         };
 
         let mqttClient;
@@ -1369,6 +1389,9 @@
                 case TOPICS.LIGHT_INTENSITY:
                     updateLightIntensity(message);
                     break;
+                case TOPICS.SIGNAL:
+                    updateSignalStatus(message);
+                    break;
             }
         }
 
@@ -1666,13 +1689,45 @@
                 statusText.style.color = 'var(--primary-yellow)';
             }
         }
+          //Update WiFi Signal UI
+        function updateSignalStatus(message) {
+            const rssi = parseInt(message);
+            const valueEl = document.getElementById('rssiValue');
+            const qualityEl = document.getElementById('rssiQuality');
+            const barEl = document.getElementById('rssiBar');
+            
+            // Update the text number
+            // Calculate percentage (Mapping -100dBm to 0% and -50dBm to 100%)
+            let qualityPercent = Math.max(0, Math.min(100, (rssi + 100) * 2));
+            // Update the text number
+            valueEl.textContent = qualityPercent + ' %';
+            barEl.style.width = qualityPercent + "%";
 
+            // Logic for Color and Text
+            if (rssi > -60) {
+                // Excellent (Green)
+                qualityEl.textContent = "Excellent Connection";
+                qualityEl.style.color = "var(--primary-green)";
+                barEl.style.background = "var(--primary-green)";
+            } else if (rssi > -75) {
+                // Good (Yellow)
+                qualityEl.textContent = "Stable Connection";
+                qualityEl.style.color = "var(--primary-yellow)";
+                barEl.style.background = "var(--primary-yellow)";
+            } else {
+                // Weak (Red)
+                qualityEl.textContent = "Weak Signal";
+                qualityEl.style.color = "var(--primary-red)";
+                barEl.style.background = "var(--primary-red)";
+            }
+        }
         // Initialize on load
         window.addEventListener('load', function() {
             initChart();
             loadChartData();
             initMQTT();
         });
+      
     </script>
 </body>
 </html>

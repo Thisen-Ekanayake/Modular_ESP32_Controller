@@ -886,7 +886,7 @@
             POWER: 'esp32/sensor/power',      // <--- NEW: 5V Power
             VOLTAGE2: 'esp32/sensor2/voltage',
             CURRENT2: 'esp32/sensor2/current', // Already existed
-            POWER2: 'esp32/sensor2/power',     // <--- NEW: 12V Power
+            POWER2: 'esp32/sensor2/power',     // <--- NEW:main Power
             // -------------------
             POWERCUT: 'esp32/powercut/status',
             COMMAND: 'esp32/command/status',
@@ -1314,83 +1314,80 @@
         }
 
         function handleMessage(topic, message) {
+            const msg = message.toString();
+
             switch(topic) {
                 case TOPICS.STATUS:
-                    updateLEDStatus(message);
+                    updateLEDStatus(msg);
                     break;
+
                 // --- 5V System (Backup) ---
                 case TOPICS.VOLTAGE:
-                    const backupV = parseFloat(message);
+                    const backupV = parseFloat(msg);
                     document.getElementById('backupVoltage').textContent = backupV.toFixed(2);
+                    
                     // Update chart
                     const mainVForChart = parseFloat(document.getElementById('mainVoltage').textContent) || 0;
                     updateChart(backupV, mainVForChart);
                     
-                    // Low voltage warning logic
                     if (backupV < 4.5 && backupV > 0) {
                         showLowVoltageWarning(backupV);
                     }
                     break;
 
                 case TOPICS.CURRENT:
-                    document.getElementById('backupCurrent').textContent = parseFloat(message).toFixed(2);
+                    // Using Math.abs to fix negative values
+                    document.getElementById('backupCurrent').textContent = Math.abs(parseFloat(msg)).toFixed(2);
                     break;
 
                 case TOPICS.POWER:
-                    document.getElementById('backupPower').textContent = parseFloat(message).toFixed(2);
+                    // Directly update power from ESP32 message
+                    document.getElementById('backupPower').textContent = parseFloat(msg).toFixed(2);
                     break;
 
                 // --- 12V System (Main) ---
                 case TOPICS.VOLTAGE2:
-                    document.getElementById('mainVoltage').textContent = parseFloat(message).toFixed(2);
+                    document.getElementById('mainVoltage').textContent = parseFloat(msg).toFixed(2);
                     break;
 
                 case TOPICS.CURRENT2:
-                    document.getElementById('mainCurrent').textContent = parseFloat(message).toFixed(2);
+                    // Using Math.abs to fix negative values
+                    document.getElementById('mainCurrent').textContent = Math.abs(parseFloat(msg)).toFixed(2);
                     break;
 
                 case TOPICS.POWER2:
-                    document.getElementById('mainPower').textContent = parseFloat(message).toFixed(2);
+                    // Directly update power from ESP32 message
+                    document.getElementById('mainPower').textContent = parseFloat(msg).toFixed(2);
                     break;
-                case TOPICS.CURRENT:
-                    document.getElementById('backupCurrent').textContent = parseFloat(message).toFixed(2);
-                    updatePower('backup');
-                    break;
-                case TOPICS.VOLTAGE2:
-                    document.getElementById('mainVoltage').textContent = parseFloat(message).toFixed(2);
-                    updatePower('main');
-                    break;
-                case TOPICS.CURRENT2:
-                    document.getElementById('mainCurrent').textContent = parseFloat(message).toFixed(2);
-                    updatePower('main');
-                    break;
+
+                // --- Status & Control ---
                 case TOPICS.LED2_STATUS:
-                    updateSystemStatus(message);
+                    updateSystemStatus(msg);
                     break;
                 case TOPICS.LED4_STATUS:
-                    updateIntensityStatus(message);
+                    updateIntensityStatus(msg);
                     break;
                 case TOPICS.POWERCUT:
-                    updatePowerAlert(message);
+                    updatePowerAlert(msg);
                     break;
                 case TOPICS.COMMAND:
-                    if (message === 'CLEAR_LOG') {
+                    if (msg === 'CLEAR_LOG') {
                         document.getElementById('commandLog').innerHTML = '';
                     } else {
-                        addLog(message);
+                        addLog(msg);
                     }
                     break;
                 case TOPICS.EMERGENCY_STATUS:
-                    updateEmergencyStatus(message);
+                    updateEmergencyStatus(msg);
                     break;
                 case TOPICS.HISTORY:
-                    saveHistoryEvent(message);
+                    saveHistoryEvent(msg);
                     break;
                 case TOPICS.LIGHT_INTENSITY:
-                    updateLightIntensity(message);
+                    updateLightIntensity(msg);
                     break;
                 case TOPICS.SIGNAL:
-                    updateSignalStatus(message);
+                    updateSignalStatus(msg);
                     break;
             }
         }

@@ -60,29 +60,43 @@ void updateSensors() {
     
     Serial.println("\n--- Channel Measurements ---");
     
-    // Channel 1
+    // --- CHANNEL 1 (Main Power) ---
     float v1 = INA.getBusVoltage(0);
-    float c1 = INA.getCurrent(0) * 1000.0; 
-    char v1s[10], c1s[10];
-    dtostrf(v1, 5, 3, v1s); dtostrf(c1, 6, 2, c1s);
+    float c1 = fabsf(INA.getCurrent(0) * 1000.0); // Force Positive Current
+    float p1 = v1 * c1; // Calculate Power (mW)
+    
+    char v1s[10], c1s[10], p1s[10];
+    dtostrf(v1, 5, 3, v1s); 
+    dtostrf(c1, 6, 2, c1s);
+    dtostrf(p1, 6, 2, p1s); // Convert Power to String
+
     mqtt_client.publish(mqtt_sensor_voltage_topic, v1s);
     mqtt_client.publish(mqtt_sensor_current_topic, c1s);
-    Serial.printf("CH1: %.3f V | %.2f mA\n", v1, c1);
+    mqtt_client.publish(mqtt_sensor_power_topic, p1s); // <--- NEW: Publish Power
+    
+    Serial.printf("CH1: %.3f V | %.2f mA | %.2f mW\n", v1, c1, p1);
 
-    // Channel 2
+    // --- CHANNEL 2 (System Power) ---
     float v2 = INA.getBusVoltage(1);
-    float c2 = INA.getCurrent(1) * 1000.0; 
-    char v2s[10], c2s[10];
-    dtostrf(v2, 5, 3, v2s); dtostrf(c2, 6, 2, c2s);
+    float c2 = fabsf(INA.getCurrent(1) * 1000.0); // Force Positive Current
+    float p2 = v2 * c2; // Calculate Power (mW)
+
+    char v2s[10], c2s[10], p2s[10];
+    dtostrf(v2, 5, 3, v2s); 
+    dtostrf(c2, 6, 2, c2s);
+    dtostrf(p2, 6, 2, p2s); // Convert Power to String
+
     mqtt_client.publish(mqtt_sensor2_voltage_topic, v2s);
     mqtt_client.publish(mqtt_sensor2_current_topic, c2s);
-    Serial.printf("CH2: %.3f V | %.2f mA\n", v2, c2);
+    mqtt_client.publish(mqtt_sensor2_power_topic, p2s); // <--- NEW: Publish Power
+    
+    Serial.printf("CH2: %.3f V | %.2f mA | %.2f mW\n", v2, c2, p2);
     
     // --- ENERGY CALCULATION ---
     if (powerCutDetected) {
       float timeDelta = (currentMillis - lastEnergyCalcTime) / 1000.0;
-      float power = v1 * (c1 / 1000.0); 
-      totalEnergyConsumed += (power * (timeDelta / 3600.0) * 1000.0);
+      // p1 is already calculated above as v1 * c1
+      totalEnergyConsumed += (p1 * (timeDelta / 3600.0)); 
       lastEnergyCalcTime = currentMillis;
     }
 
@@ -108,7 +122,6 @@ void updateSensors() {
         publishCommandStatus("✓ Step 1: GPIO13 (System) turned ON");
 
         // --- 2. IMMEDIATE EMERGENCY LIGHT CHECK ---
-        // Requirement: "Immediate turn on when power loss detected"
         if (currentLightIntensity < 40.0 && !manualEmergencyControl) {
             digitalWrite(POWER_STATUS_PIN, LOW); // ON
             mqtt_client.publish(mqtt_emergency_light_status_topic, "ON");

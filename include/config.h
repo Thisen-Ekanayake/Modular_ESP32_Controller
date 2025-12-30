@@ -11,6 +11,8 @@
 #define INTENSITY_B0_PIN 32   
 #define INTENSITY_B1_PIN 33   
 #define INTENSITY_B2_PIN 35   
+#define POWER_DETECT_PIN 18   
+#define POWER_CUT_STATE LOW   
 
 // --- WIFI CREDENTIALS ---
 extern const char* ssid;
@@ -30,8 +32,14 @@ extern const char* mqtt_led4_topic;
 extern const char* mqtt_led4_status_topic;
 extern const char* mqtt_sensor_voltage_topic;
 extern const char* mqtt_sensor_current_topic;
+// --- ADD THIS ---
+extern const char* mqtt_sensor_power_topic; 
+// ----------------
 extern const char* mqtt_sensor2_voltage_topic;
 extern const char* mqtt_sensor2_current_topic;
+// --- ADD THIS ---
+extern const char* mqtt_sensor2_power_topic;
+// ----------------
 extern const char* mqtt_powercut_topic;
 extern const char* mqtt_command_status_topic;
 extern const char* mqtt_emergency_light_topic;

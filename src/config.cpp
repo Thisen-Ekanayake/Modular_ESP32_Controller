@@ -18,8 +18,14 @@ const char* mqtt_led4_topic = "esp32/led4/control";
 const char* mqtt_led4_status_topic = "esp32/led4/status";
 const char* mqtt_sensor_voltage_topic = "esp32/sensor/voltage";
 const char* mqtt_sensor_current_topic = "esp32/sensor/current";
+// --- POWER TOPIC 1 ---
+const char* mqtt_sensor_power_topic = "esp32/sensor/power"; 
+// ---------------------
 const char* mqtt_sensor2_voltage_topic = "esp32/sensor2/voltage";
 const char* mqtt_sensor2_current_topic = "esp32/sensor2/current";
+// --- POWER TOPIC 2 ---
+const char* mqtt_sensor2_power_topic = "esp32/sensor2/power";
+// ---------------------
 const char* mqtt_powercut_topic = "esp32/powercut/status";
 const char* mqtt_command_status_topic = "esp32/command/status";
 const char* mqtt_emergency_light_topic = "esp32/emergency/control";

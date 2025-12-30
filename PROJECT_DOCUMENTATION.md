@@ -1,39 +1,39 @@
-# 🌍 ESP32 Global LED Control System
+# 🌟 Light Intensity & Power Backup System
 
 ## 📋 Project Overview
 
-A complete IoT system that allows you to control an ESP32's onboard LED from **anywhere in the world** using a web browser. No port forwarding, no VPN, no local network required!
+Complete IoT monitoring and control system for intelligent lighting and emergency power management using ESP32, INA3221 sensors, and real-time MQTT communication.
+
 
 ### Key Features
-✅ Control LED from any device (phone, tablet, computer)  
-✅ Works from any network (home WiFi, mobile data, office)  
-✅ Real-time bidirectional communication via MQTT  
-✅ Beautiful responsive web interface  
-✅ Connection status indicators  
-✅ Automatic reconnection handling  
+✅ Real-time Light Intensity Monitoring (3-bit binary input, 0-100%)  
+✅ Dual Power Monitoring (Battery backup and main power via INA3221)  
+✅ Intelligent Emergency Light Control (activates only when needed)  
+✅ Automated Emergency Sequence during power cuts  
+✅ Web Dashboard for monitoring and control from anywhere  
+✅ Power Cut History Tracking with energy consumption data  
 
 ---
 
-## 🏗️ System Architecture
 
+## 🏗️ System Architecture
 ```
-┌─────────────────┐         ┌──────────────────┐         ┌─────────────┐
-│  Web Browser    │────────▶│  MQTT Broker     │────────▶│   ESP32     │
-│  (Anywhere)     │         │ (HiveMQ Cloud)   │         │ (Your Home) │
-│                 │◀────────│                  │◀────────│             │
-└─────────────────┘         └──────────────────┘         └─────────────┘
-    Internet                     Internet                   WiFi: Dialog 4G
-    Any Network                  Public Cloud               LED: GPIO 2
+┌──────────────────┐          ┌──────────────────┐          ┌────────────────┐
+│  Web Dashboard   │─────────▶│  MQTT Broker     │─────────▶│     ESP32      │
+│  (Any Browser)   │          │ (HiveMQ Cloud)   │          │  + INA3221     │
+│                  │◀────────│                  │◀──────── │  + Sensors     │
+└──────────────────┘          └──────────────────┘          └────────────────┘
+     Internet                     Internet                   Local Network
 ```
 
 ### Communication Flow
 
-1. **User Action**: Click "Turn ON" button in web browser
-2. **Web → Broker**: Browser publishes "ON" to `chami/esp32/led/control` topic
+1. **User Action**: Click control button in web dashboard
+2. **Web → Broker**: Browser publishes command to MQTT topic
 3. **Broker → ESP32**: MQTT broker forwards message to ESP32
-4. **ESP32**: Receives "ON" command, turns LED on
-5. **ESP32 → Broker**: ESP32 publishes "ON" to `chami/esp32/led/status` topic
-6. **Broker → Web**: Browser receives status update and shows green indicator
+4. **ESP32**: Receives command, updates light/power state
+5. **ESP32 → Broker**: ESP32 publishes status to MQTT topic
+6. **Broker → Web**: Browser receives status update and updates UI
 
 ---
 

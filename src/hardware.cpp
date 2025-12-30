@@ -48,6 +48,9 @@ void updateSensors() {
     int val = (b2 << 2) | (b1 << 1) | b0;
     currentLightIntensity = (val / 7.0) * 100.0;
 
+    //Save to Shared Variable for Telegram
+    shared_intensity = currentLightIntensity;
+
     char intensityStr[10];
     dtostrf(currentLightIntensity, 5, 1, intensityStr);
     mqtt_client.publish(mqtt_light_intensity_topic, intensityStr);
@@ -65,6 +68,11 @@ void updateSensors() {
     float c1 = fabsf(INA.getCurrent(0) * 1000.0); // Force Positive Current
     float p1 = v1 * c1; // Calculate Power (mW)
     
+    //Save Ch1 to Shared Variables
+    shared_v1 = v1;
+    shared_c1 = c1;
+    shared_p1 = p1;
+
     char v1s[10], c1s[10], p1s[10];
     dtostrf(v1, 5, 3, v1s); 
     dtostrf(c1, 6, 2, c1s);
@@ -80,6 +88,11 @@ void updateSensors() {
     float v2 = INA.getBusVoltage(1);
     float c2 = fabsf(INA.getCurrent(1) * 1000.0); // Force Positive Current
     float p2 = v2 * c2; // Calculate Power (mW)
+
+    //Save Ch2 to Shared Variables
+    shared_v2 = v2;
+    shared_c2 = c2;
+    shared_p2 = p2;
 
     char v2s[10], c2s[10], p2s[10];
     dtostrf(v2, 5, 3, v2s); 
@@ -235,4 +248,38 @@ void handleEmergencyLogic() {
       emergencyModeActive = false; // Stop this sequence, but powerCutDetected stays true
     }
   }
+  
 }
+// Force Immediate Reading for Telegram ---
+void forceSensorUpdate() {
+  Serial.println("Forcing sensor update for Telegram...");
+
+  // 1. Read Light Intensity Immediately
+  int b0 = digitalRead(INTENSITY_B0_PIN);
+  int b1 = digitalRead(INTENSITY_B1_PIN);
+  int b2 = digitalRead(INTENSITY_B2_PIN);
+  int val = (b2 << 2) | (b1 << 1) | b0;
+  
+  // Update the global variables
+  currentLightIntensity = (val / 7.0) * 100.0;
+  shared_intensity = currentLightIntensity;
+  
+  // 2. Read Power Sensors Immediately
+  float v1 = INA.getBusVoltage(0);
+  float c1 = fabsf(INA.getCurrent(0) * 1000.0);
+  float p1 = v1 * c1;
+  
+  shared_v1 = v1;
+  shared_c1 = c1;
+  shared_p1 = p1;
+  
+  float v2 = INA.getBusVoltage(1);
+  float c2 = fabsf(INA.getCurrent(1) * 1000.0);
+  float p2 = v2 * c2;
+  
+  shared_v2 = v2;
+  shared_c2 = c2;
+  shared_p2 = p2;
+  
+  Serial.println("✓ Sensors updated.");
+ }

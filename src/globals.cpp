@@ -22,3 +22,12 @@ unsigned long emergencyStartTime = 0;
 unsigned long gpio14ActivationTime = 0;
 unsigned long powerCutStartTime = 0;
 unsigned long lastEnergyCalcTime = 0;
+
+// Define the shared variables here (initialize to 0)
+float shared_v1 = 0.0;
+float shared_c1 = 0.0;
+float shared_p1 = 0.0;
+float shared_v2 = 0.0;
+float shared_c2 = 0.0;
+float shared_p2 = 0.0;
+float shared_intensity = 0.0;

@@ -1,14 +1,25 @@
 // MQTT IoT Monitoring Web Server with TimescaleDB Integration
-require('dotenv').config(); // Load environment variables from .env file
-const express = require('express');
-const path = require('path');
-const mqtt = require('mqtt');
-const { Pool } = require('pg');
+import dotenv from 'dotenv';
+dotenv.config(); // Load environment variables from .env file
+import express from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { existsSync } from 'fs';
+import mqtt from 'mqtt';
+import pkg from 'pg';
+const { Pool } = pkg;
 
+// ESM compatible __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+let lastInsertTime = 0;
+const INSERT_INTERVAL = 2000;
+
 // TimescaleDB connection configuration
+/*
 const dbConfig = {
     host: process.env.TIMESCALEDB_HOST || 'localhost',
     port: parseInt(process.env.TIMESCALEDB_PORT || '5432'),
@@ -19,9 +30,16 @@ const dbConfig = {
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 2000,
 };
+*/
 
 // Create PostgreSQL connection pool
-const pool = new Pool(dbConfig);
+// const pool = new Pool(dbConfig);
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
+  }
+});
 
 // Test database connection
 pool.on('connect', () => {
@@ -49,7 +67,7 @@ pool.on('error', (err) => {
 })();
 
 // MQTT Broker configuration
-const MQTT_BROKER = process.env.MQTT_BROKER || 'wss://broker.hivemq.com:8884/mqtt';
+const MQTT_BROKER = process.env.MQTT_BROKER || 'mqtt://broker.hivemq.com:1883';
 const MQTT_TOPICS = [
     'esp32/sensor/voltage',
     'esp32/sensor/current',
@@ -84,8 +102,8 @@ function connectMQTT() {
     console.log('Connecting to MQTT broker:', MQTT_BROKER);
     
     mqttClient = mqtt.connect(MQTT_BROKER, {
-        clientId: 'WebServer_' + Math.random().toString(16).substr(2, 8),
-        clean: true,
+        clientId: 'WebServer_' + Math.random().toString(16).slice(2),
+        keepalive: 60,
         reconnectPeriod: 1000,
     });
 
@@ -143,10 +161,16 @@ function connectMQTT() {
             }
 
             // Store sensor readings every 2 seconds (when we have all data)
-            if (lastSensorReading.battery_voltage !== null && 
-                lastSensorReading.main_voltage !== null) {
+            const now = Date.now();
+            if (
+                lastSensorReading.battery_voltage !== null &&
+                lastSensorReading.main_voltage !== null &&
+                now - lastInsertTime >= INSERT_INTERVAL
+            ) {
+                lastInsertTime = now;
                 await storeSensorReading(timestamp);
             }
+
 
             // Handle power cut history
             if (topic === 'esp32/history/powercut') {
@@ -273,43 +297,65 @@ async function storeCommandLog(topic, message, timestamp) {
     }
 }
 
-// Frontend directory path
+// Frontend directory paths
 const frontendPath = path.join(__dirname, '..', 'frontend');
+const frontendDistPath = path.join(__dirname, '..', 'frontend', 'dist');
 
 // Middleware
-app.use(express.static(frontendPath));
 app.use(express.json());
 
-// Serve main dashboard
-app.get('/', (req, res) => {
-    res.sendFile(path.join(frontendPath, 'dashboard.html'));
-});
+// API routes (must come before static file serving)
+// All API routes are defined below
 
-app.get('/dashboard', (req, res) => {
-    res.sendFile(path.join(frontendPath, 'dashboard.html'));
-});
+// Serve static files from React build (if dist exists) or fallback to old HTML files
+const distExists = existsSync(frontendDistPath);
 
-app.get('/dashboard.html', (req, res) => {
-    res.sendFile(path.join(frontendPath, 'dashboard.html'));
-});
+if (distExists) {
+    // Serve React build
+    app.use(express.static(frontendDistPath));
+    
+    // Serve React app for all routes (React Router handles routing)
+    app.get('*', (req, res) => {
+        // Don't serve React app for API routes
+        if (req.path.startsWith('/api')) {
+            return res.status(404).json({ error: 'API endpoint not found' });
+        }
+        res.sendFile(path.join(frontendDistPath, 'index.html'));
+    });
+} else {
+    // Fallback to old HTML files if React build doesn't exist
+    console.log('⚠️  React build not found, serving legacy HTML files');
+    app.use(express.static(frontendPath));
+    
+    // Serve legacy HTML pages
+    app.get('/', (req, res) => {
+        res.sendFile(path.join(frontendPath, 'dashboard.html'));
+    });
 
-// Serve history page
-app.get('/history', (req, res) => {
-    res.sendFile(path.join(frontendPath, 'history.html'));
-});
+    app.get('/dashboard', (req, res) => {
+        res.sendFile(path.join(frontendPath, 'dashboard.html'));
+    });
 
-app.get('/history.html', (req, res) => {
-    res.sendFile(path.join(frontendPath, 'history.html'));
-});
+    app.get('/dashboard.html', (req, res) => {
+        res.sendFile(path.join(frontendPath, 'dashboard.html'));
+    });
 
-// Serve global control page
-app.get('/global-control', (req, res) => {
-    res.sendFile(path.join(frontendPath, 'global-control.html'));
-});
+    app.get('/history', (req, res) => {
+        res.sendFile(path.join(frontendPath, 'history.html'));
+    });
 
-app.get('/global-control.html', (req, res) => {
-    res.sendFile(path.join(frontendPath, 'global-control.html'));
-});
+    app.get('/history.html', (req, res) => {
+        res.sendFile(path.join(frontendPath, 'history.html'));
+    });
+
+    app.get('/global-control', (req, res) => {
+        res.sendFile(path.join(frontendPath, 'global-control.html'));
+    });
+
+    app.get('/global-control.html', (req, res) => {
+        res.sendFile(path.join(frontendPath, 'global-control.html'));
+    });
+}
 
 // Health check endpoint
 app.get('/api/health', async (req, res) => {
@@ -476,6 +522,7 @@ app.get('/api/statistics', async (req, res) => {
 
 // Start server
 app.listen(PORT, '0.0.0.0', async () => {
+    /*
     console.log('=============================================');
     console.log('🌐 IoT Monitoring System - GLOBAL ACCESS');
     console.log('=============================================');
@@ -487,7 +534,7 @@ app.listen(PORT, '0.0.0.0', async () => {
     console.log(`🔌 MQTT Broker:     ${MQTT_BROKER}`);
     console.log(`🗄️  TimescaleDB:     ${dbConfig.host}:${dbConfig.port}/${dbConfig.database}`);
     console.log('=============================================');
-    
+    */
     // Verify database connection before starting
     try {
         const dbCheck = await pool.query('SELECT NOW()');

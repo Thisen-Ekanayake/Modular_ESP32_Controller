@@ -1,5 +1,5 @@
--- TimescaleDB Schema for IoT Monitoring System
--- This script creates all necessary tables and converts them to hypertables
+-- TimescaleDB Core Schema for IoT Monitoring System
+-- Tables, indexes, hypertables (transaction-safe)
 
 -- Enable TimescaleDB extension
 CREATE EXTENSION IF NOT EXISTS timescaledb;
@@ -24,10 +24,10 @@ CREATE TABLE IF NOT EXISTS sensor_readings (
     power_cut_status VARCHAR(20) DEFAULT 'NORMAL'
 );
 
--- Create hypertable for sensor_readings (partitioned by time)
+-- Create hypertable for sensor_readings
 SELECT create_hypertable('sensor_readings', 'time', if_not_exists => TRUE);
 
--- Create index on device_id for faster queries
+-- Indexes
 CREATE INDEX IF NOT EXISTS idx_sensor_readings_device_id ON sensor_readings(device_id);
 CREATE INDEX IF NOT EXISTS idx_sensor_readings_time_device ON sensor_readings(time DESC, device_id);
 
@@ -48,10 +48,10 @@ CREATE TABLE IF NOT EXISTS power_cut_events (
     PRIMARY KEY (id, start_time)
 );
 
--- Create hypertable for power_cut_events
+-- Create hypertable
 SELECT create_hypertable('power_cut_events', 'start_time', if_not_exists => TRUE);
 
--- Create indexes
+-- Indexes
 CREATE INDEX IF NOT EXISTS idx_power_cut_events_device_id ON power_cut_events(device_id);
 CREATE INDEX IF NOT EXISTS idx_power_cut_events_start_time ON power_cut_events(start_time DESC);
 
@@ -67,53 +67,13 @@ CREATE TABLE IF NOT EXISTS command_logs (
     topic VARCHAR(255),
     message TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    PRIMARY KEY  (id, time)
+    PRIMARY KEY (id, time)
 );
 
--- Create hypertable for command_logs
+-- Create hypertable
 SELECT create_hypertable('command_logs', 'time', if_not_exists => TRUE);
 
--- Create indexes
+-- Indexes
 CREATE INDEX IF NOT EXISTS idx_command_logs_device_id ON command_logs(device_id);
 CREATE INDEX IF NOT EXISTS idx_command_logs_time ON command_logs(time DESC);
 CREATE INDEX IF NOT EXISTS idx_command_logs_command_type ON command_logs(command_type);
-
--- ============================================
--- Retention Policy (Optional - Clean old data)
--- ============================================
--- Uncomment to enable automatic data retention (keeps last 90 days)
--- SELECT add_retention_policy('sensor_readings', INTERVAL '90 days', if_not_exists => TRUE);
--- SELECT add_retention_policy('power_cut_events', INTERVAL '365 days', if_not_exists => TRUE);
--- SELECT add_retention_policy('command_logs', INTERVAL '90 days', if_not_exists => TRUE);
-
--- ============================================
--- Continuous Aggregates (Optional - Pre-computed statistics)
--- ============================================
--- Create continuous aggregate for hourly statistics
-CREATE MATERIALIZED VIEW IF NOT EXISTS sensor_readings_hourly
-WITH (timescaledb.continuous) AS
-SELECT
-    time_bucket('1 hour', time) AS bucket,
-    device_id,
-    AVG(battery_voltage) AS avg_battery_voltage,
-    AVG(battery_current) AS avg_battery_current,
-    AVG(main_voltage) AS avg_main_voltage,
-    AVG(main_current) AS avg_main_current,
-    AVG(light_intensity) AS avg_light_intensity,
-    COUNT(*) AS reading_count
-FROM sensor_readings
-GROUP BY bucket, device_id;
-
--- Add refresh policy for continuous aggregate (refresh every hour)
-SELECT add_continuous_aggregate_policy('sensor_readings_hourly',
-    start_offset => INTERVAL '3 hours',
-    end_offset => INTERVAL '1 hour',
-    schedule_interval => INTERVAL '1 hour',
-    if_not_exists => TRUE);
-
--- ============================================
--- Grant Permissions (Adjust as needed)
--- ============================================
--- GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO your_user;
--- GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO your_user;
-
